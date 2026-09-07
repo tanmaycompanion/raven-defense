@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<meta name="theme-color" content="#faf9f6">
+<title>Raven Defense — Tanmay Joshi</title>
+<meta name="description" content="A browser-based prototype exploring calibrated judgment under uncertainty. Built end-to-end in AI co-design.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#faf9f6;
+    --ink:#1a1a1a;
+    --ink-mute:#5b5b5b;
+    --ink-dim:#8a8a8a;
+    --border:#e8e6df;
+    --border-strong:#d4d1c7;
+    --accent:#3d5a3d;
+    --accent-hover:#2d452d;
+    --panel:#f2f0e9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{background:var(--bg);color:var(--ink);}
+  body{font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.6;letter-spacing:-0.005em;}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .15s ease;}
+  a:hover{border-bottom-color:var(--accent);}
+
+  /* two-column layout: sticky sidebar left, writeup right */
+  .layout{display:grid;grid-template-columns:280px 1fr;gap:80px;max-width:1080px;margin:0 auto;padding:80px 40px 60px;}
+
+  .sidebar{position:sticky;top:80px;align-self:start;height:fit-content;}
+  .side-eyebrow{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:0.12em;font-weight:500;margin-bottom:16px;}
+  .side-title{font-family:'Fraunces',serif;font-size:38px;line-height:1.05;letter-spacing:-0.03em;font-weight:500;margin-bottom:14px;}
+  .side-lede{font-family:'Fraunces',serif;font-size:16px;line-height:1.5;color:var(--ink-mute);letter-spacing:-0.005em;font-weight:400;margin-bottom:28px;}
+  .cta{display:inline-flex;align-items:center;gap:10px;padding:13px 22px;background:var(--accent);color:#fff;border-radius:8px;font-weight:500;font-size:14.5px;transition:background .15s ease;border-bottom:none;}
+  .cta:hover{background:var(--accent-hover);border-bottom:none;}
+  .cta svg{width:14px;height:14px;}
+  .cta-sub{display:block;margin-top:10px;color:var(--ink-dim);font-size:12.5px;}
+  .side-meta{margin-top:36px;padding-top:24px;border-top:1px solid var(--border);font-size:13px;color:var(--ink-mute);}
+  .side-meta .row{display:flex;justify-content:space-between;padding:6px 0;}
+  .side-meta .row .k{color:var(--ink-dim);}
+  .side-meta .row .v{color:var(--ink);}
+  .side-links{margin-top:20px;display:flex;flex-direction:column;gap:6px;}
+  .side-links a{font-size:13px;color:var(--ink-mute);}
+  .side-links a:hover{color:var(--ink);border-color:var(--ink);}
+
+  /* writeup column */
+  .content{max-width:640px;}
+  h1{font-family:'Fraunces',serif;font-size:32px;line-height:1.15;letter-spacing:-0.02em;font-weight:500;margin:56px 0 20px;}
+  h1:first-child{margin-top:0;}
+  p{margin-bottom:22px;color:var(--ink);}
+  em{font-family:'Fraunces',serif;font-style:italic;color:var(--ink);}
+  .content a{border-bottom:1px solid var(--accent);}
+
+  /* mobile-only note that shows in place of the CTA */
+  .mobile-note{display:none;padding:16px 18px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink-mute);margin-bottom:28px;}
+  .mobile-note b{color:var(--ink);font-weight:500;}
+
+  footer{max-width:1080px;margin:60px auto 0;padding:32px 40px;border-top:1px solid var(--border);color:var(--ink-dim);font-size:13px;display:flex;justify-content:space-between;align-items:center;}
+  footer a{color:var(--ink-dim);}
+  footer a:hover{color:var(--ink);}
+
+  @media(max-width:900px){
+    .layout{grid-template-columns:1fr;gap:40px;padding:48px 24px 32px;max-width:100%;}
+    .sidebar{position:static;}
+    .side-title{font-size:34px;}
+    .content{max-width:100%;}
+    /* on mobile: hide CTA, show note */
+    .cta,.cta-sub{display:none;}
+    .mobile-note{display:block;}
+    h1{font-size:26px;margin:48px 0 16px;}
+    p{font-size:15px;line-height:1.65;}
+    footer{flex-direction:column;gap:14px;align-items:flex-start;padding:24px;font-size:12px;}
+    footer .fl a.play-link{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="side-eyebrow">Independent build · 2026</div>
+    <div class="side-title">Raven Defense</div>
+    <div class="side-lede">A browser-based prototype about making calibrated judgments under uncertainty.</div>
+
+    <a class="cta" href="play.html" target="_blank" rel="noopener">
+      Play the prototype
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 12 19 12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </a>
+    <span class="cta-sub">Desktop recommended · ~30s to try</span>
+
+    <div class="mobile-note">
+      <b>The prototype is desktop-only.</b> It's a multi-panel operator interface with a canvas-based signal-detection game — the mechanics need a full screen and precise pointing to work well. Come back on a laptop or desktop to try it. The writing to the right covers what it is and how it works.
+    </div>
+
+    <div class="side-meta">
+      <div class="row"><span class="k">By</span><span class="v">Tanmay Joshi</span></div>
+      <div class="row"><span class="k">Type</span><span class="v">Prototype · case study</span></div>
+      <div class="row"><span class="k">Year</span><span class="v">2026</span></div>
+    </div>
+
+    <div class="side-links">
+      <a href="https://www.linkedin.com/in/tanmay-joshi003/" target="_blank" rel="noopener">LinkedIn ↗</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <h1>What it is</h1>
+    <p>Raven Defense is an asset classification and threat review simulation built to explore calibrated judgment under noise and time pressure, simulating real-life anomaly scenarios through interactive signal-detection. At its core is the live deck multi-domain radar, which provides real-time track synthesis across aerial, surface, and subsurface layers using procedural contact vectors, range rings, sweeping radar grids, and canvas-rendered confidence metrics. Operators participate in watch shift drills to process ambiguous contacts by evaluating up to four noisy evidence streams — an IFF transponder check, radar cross-section patterns, movement deviations, and comms intercept — each with a different, known reliability (85%, 70%, 60%, 55%). Decisions to clear or escalate are evaluated alongside explicit confidence estimates (0–100%) using the Brier score, a measure of precision calculated using the mean squared error between the user's estimated threat probability and the actual outcome. Users choose which evidence to gather, each costing a small amount of in-world time, then set a confidence estimate for how likely they think the contact is a threat. Because it is a strictly proper scoring rule, it provides an objective way to train users to calibrate their judgment under uncertainty, rewarding well-calibrated confidence and penalizing misplaced certainty.</p>
+
+    <p>The system also includes operator progression across three class archetypes — Skyrunner (aerial), Tidewarden (surface), and Deepdiver (subsurface) — featuring rank progression, customized loadouts, and unlockable gear. The mechanism is a distilled version of what human evaluators do every day at any AI lab engaging in impactful frontier work: form calibrated judgments under uncertainty with incomplete evidence, being scored on whether the confidence holds up.</p>
+
+    <h1>What I took from building it</h1>
+    <p>The most critical insight from building this platform was learning to steer a system toward intent rather than genre. Left to its defaults, the elements the model kept converging on were passable for a conventional defense interface, but were missing the ingredients of an intuitive, engaging user experience. Interestingly, direct constraints outperformed broad conceptual feedback when specifying underlying logic and scoring mechanisms, but visual and interaction design flourished under looser, example-driven guidelines. Observing this, I decided to create more room for the model to think on its own, saying things like, <em>"The core experience should rely on user feedback,"</em> and <em>"Focus on making the gameplay intuitive and high-stakes."</em> By intentionally stepping back, while also rejecting several rounds of lackluster iterations, the model proposed the Brier-score mechanic. Calibrated judgment as the interactive engine provided the exact blend of challenge and intuitiveness for the user, and it was something I did not think to specify in advance. My role was simply to recognize it when it appeared, and refuse anything merely adequate that came before it. In human-in-the-loop engineering, the scarce input is not technical direction, but the capacity to recognize that the work is not yet good without knowing exactly what "good" looks like. Left alone, the model continually settled on a competent, unsurprising baseline of the tasks it was given. In <a href="https://subhadipmitra.com/blog/2026/loop-engineering-verifier/" target="_blank" rel="noopener">an article on loop engineering written by Subhadip Mitra</a>, he echoes this phenomenon, discussing how automated loops naturally optimize for the cheapest output that clears a proxy bar, stating that convergence is rarely synonymous with true correctness. Mitra points out that unattended loops inevitably lose your standards and personal taste unless you explicitly write them down. While this was not an issue in the short term as I manually steered the model myself, it revealed an operational constraint: scaling a system like this would require my taste to be translated into principles the model could apply without my judgment in the loop. The ceiling, I learned, was not the model's capability, but rather the standard of the person controlling the loop.</p>
+
+    <p>These findings, to my surprise, mirrored my experience in the music industry, where high-performance outcomes rely on balancing clear goals with creative autonomy. While managing audio engineers, merchandise vendors, and stage design crews, rigorous guidelines ensured a baseline of delivery, but true breakthroughs only occurred when we left room for our collaborators to interpret the overarching intent. An audio engineer would intuitively level a guitar to carve out space for a vocal, a printer would optimize merchandise layouts on the fly, or a lighting technician would invent a brilliant, bespoke cue simply by being present in rehearsal. These instances transformed a top-down mandate into a shared community mission, compounding on the effects a unified goal creates and raising the standard of performance around our company, eventually turning it into a self-sustaining machine.</p>
+
+    <p>There is a delicate balance required when training and communicating with AI in this way, but it is the key to unlocking systems that are self-reliant and capable of working on complex processes autonomously. Although we are far from creating systems that exhibit human-like curiosity and interest, the same sentiments that drive the current processes and collaboration will likely shape those systems in the coming years.</p>
+
+    <h1>Where I'm headed</h1>
+    <p>Building a first version of this was mostly a design challenge, but scaling it would be an engineering one. A live version would need real ground truth to score against, evidence streams calibrated against actual base rates rather than assumed reliabilities, and a way to detect when the mechanic itself starts to game its own scoring — the same convergence-without-correctness failure mode that Mitra identifies. Harder still, it would need the judgment I applied manually across dozens of iterations to be encoded into something reproducible: rubrics, guardrails, review processes that hold to a standard when I'm not in the loop. A scaled version has to work because the taste has been externalized, and that translation is genuinely non-trivial work, most of which I haven't done.</p>
+
+    <p>The discipline this prototype exercises — calibrated judgment under uncertainty, weighing evidence of known and imperfect reliability, being honest about how sure you are — is not specific to defense or to games. It is the underlying muscle behind serious evaluation work in almost any domain where the stakes are high and the ground truth is incomplete. Clinical diagnosis operates on this exact shape: multiple tests of varying sensitivity and specificity, a confidence assessment, an escalation call. So does legal adjudication, defense analysis, insurance fraud detection, and every evaluation loop at any frontier AI lab. While the mechanics differ, the underlying judgment is the same. That is the work I want to be doing next, and I think it is the work that is about to matter most.</p>
+  </main>
+</div>
+
+<footer>
+  <div>Tanmay Joshi · 2026</div>
+  <div class="fl">
+    <a class="play-link" href="play.html" target="_blank" rel="noopener">Play</a>
+    &nbsp;·&nbsp;
+    <a href="https://www.linkedin.com/in/tanmay-joshi003/" target="_blank" rel="noopener">LinkedIn</a>
+  </div>
+</footer>
+
+</body>
+</html>

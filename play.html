@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark only">
+<meta name="theme-color" content="#08080a">
+<title>Raven Defense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* surfaces — layered depth like Linear */
+    --bg:#08080a; --panel:#101013; --panel-2:#16161a; --panel-3:#1c1c22;
+    --border:#232329; --border-strong:#2e2e36;
+    /* type */
+    --ink:#f4f4f5; --ink-mute:#a1a1aa; --ink-dim:#71717a;
+    /* accent — restrained muted emerald */
+    --accent:#4ade80; --accent-dim:#22c55e; --accent-soft:rgba(74,222,128,.12);
+    --accent-bg:rgba(74,222,128,.08); --accent-border:rgba(74,222,128,.2);
+    /* semantic */
+    --neutral:#4ade80; --unknown:#a78bfa; --threat:#f87171; --caution:#fbbf24;
+    --air:#60a5fa; --surf:#fbbf24; --sub:#f472b6;
+    /* motion */
+    --tx:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{height:100%;}
+  body{font-family:'General Sans',system-ui,sans-serif;color:var(--ink);background:var(--bg);overflow:hidden;height:100vh;font-size:14px;line-height:1.5;letter-spacing:-0.005em;}
+  ::-webkit-scrollbar{width:8px;height:8px;} ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;} ::-webkit-scrollbar-thumb:hover{background:var(--border-strong);}
+  .mono{font-family:'JetBrains Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+
+  /* app shell */
+  .app{display:grid;grid-template-columns:220px 1fr;height:100vh;}
+  .sidebar{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 12px;gap:2px;}
+  .brand{display:flex;align-items:center;gap:10px;padding:8px 10px 20px;}
+  .brand-mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--accent),var(--accent-dim));display:grid;place-items:center;}
+  .brand-mark svg{width:12px;height:12px;color:#000;}
+  .brand-name{font-weight:600;font-size:14px;letter-spacing:-0.01em;}
+  .nav-label{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.06em;padding:14px 10px 6px;font-weight:500;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:6px;color:var(--ink-mute);cursor:pointer;font-size:13.5px;font-weight:500;transition:all .15s var(--tx);user-select:none;}
+  .nav-item:hover{background:var(--panel-2);color:var(--ink);}
+  .nav-item.active{background:var(--panel-2);color:var(--ink);}
+  .nav-item.active .nav-dot{background:var(--accent);}
+  .nav-item svg{width:15px;height:15px;flex-shrink:0;}
+  .nav-dot{width:5px;height:5px;border-radius:50%;background:var(--ink-dim);margin-left:auto;transition:all .2s var(--tx);}
+  .sidebar-foot{margin-top:auto;padding:12px 10px 4px;font-size:11px;color:var(--ink-dim);}
+  .sidebar-foot .kv{display:flex;justify-content:space-between;padding:2px 0;}
+
+  /* pages */
+  .stage{position:relative;overflow:hidden;}
+  .page{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .25s var(--tx);overflow:auto;padding:24px 28px;}
+  .page.show{opacity:1;pointer-events:auto;}
+
+  /* headers */
+  .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;gap:24px;}
+  .page-title{font-size:22px;font-weight:600;letter-spacing:-0.02em;}
+  .page-sub{color:var(--ink-mute);font-size:13px;margin-top:2px;}
+  .page-meta{display:flex;align-items:center;gap:16px;color:var(--ink-mute);font-size:12px;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);display:inline-block;margin-right:6px;vertical-align:middle;animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{50%{opacity:.4;}}
+
+  /* deck grid */
+  .deck-grid{display:grid;grid-template-columns:260px 1fr 320px;grid-template-rows:1fr 180px;gap:16px;height:calc(100vh - 100px);}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px;overflow:hidden;display:flex;flex-direction:column;}
+  .card-title{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:14px;}
+  .card.map{grid-column:2;grid-row:1;padding:0;overflow:hidden;position:relative;background:#050506;}
+  .card.map canvas{display:block;width:100%;height:100%;}
+  .map-overlay{position:absolute;top:16px;left:18px;font-size:11px;color:var(--ink-mute);pointer-events:none;}
+  .map-overlay b{color:var(--ink);font-weight:600;}
+  .map-hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:10.5px;color:var(--ink-dim);pointer-events:none;letter-spacing:0.04em;}
+
+  /* domain filters */
+  .domain-list{display:flex;flex-direction:column;gap:6px;}
+  .domain-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;background:var(--panel-2);border:1px solid var(--border);cursor:pointer;transition:all .15s var(--tx);}
+  .domain-item:hover{border-color:var(--border-strong);}
+  .domain-item.off{opacity:0.4;}
+  .domain-item .di-icon{width:22px;height:22px;border-radius:5px;display:grid;place-items:center;color:#000;font-weight:600;font-size:11px;}
+  .domain-item.air .di-icon{background:var(--air);}
+  .domain-item.surf .di-icon{background:var(--surf);}
+  .domain-item.sub .di-icon{background:var(--sub);}
+  .di-name{flex:1;font-weight:500;font-size:13px;}
+  .di-count{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--ink-mute);font-variant-numeric:tabular-nums;}
+  .legend{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+  .legend-item{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:12px;}
+  .legend-swatch{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .legend-item .l-name{font-weight:500;}
+  .legend-item .l-desc{color:var(--ink-dim);font-size:11px;margin-left:auto;}
+
+  /* contact detail */
+  .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:var(--ink-dim);text-align:center;padding:24px;}
+  .empty-state svg{width:32px;height:32px;margin-bottom:12px;opacity:0.5;}
+  .empty-state .es-msg{font-size:13px;line-height:1.5;}
+  .contact-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .contact-badge{width:36px;height:36px;border-radius:8px;display:grid;place-items:center;color:#000;font-weight:600;font-size:14px;flex-shrink:0;}
+  .contact-name{font-size:15px;font-weight:600;}
+  .contact-meta{font-size:11.5px;color:var(--ink-mute);margin-top:1px;}
+  .kv-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+  .kv-row:last-child{border-bottom:none;}
+  .kv-row .k{color:var(--ink-mute);}
+  .kv-row .v{font-weight:500;font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .class-pills{display:flex;gap:4px;margin:12px 0 4px;}
+  .class-pill{flex:1;text-align:center;font-size:10.5px;padding:6px 0;border-radius:5px;background:var(--panel-2);color:var(--ink-dim);font-weight:600;letter-spacing:0.05em;border:1px solid var(--border);}
+  .class-pill.on-n{background:rgba(74,222,128,.12);color:var(--neutral);border-color:rgba(74,222,128,.3);}
+  .class-pill.on-u{background:rgba(167,139,250,.12);color:var(--unknown);border-color:rgba(167,139,250,.3);}
+  .class-pill.on-t{background:rgba(248,113,113,.12);color:var(--threat);border-color:rgba(248,113,113,.3);}
+  .card-note{margin-top:12px;padding:10px 12px;background:var(--panel-2);border-radius:6px;font-size:11.5px;color:var(--ink-mute);line-height:1.5;border-left:2px solid var(--accent);}
+
+  /* event feed */
+  .card.feed{grid-column:1 / 4;grid-row:2;}
+  .feed-list{overflow-y:auto;flex:1;margin:-4px -4px 0;padding:0 4px;}
+  .feed-item{display:grid;grid-template-columns:70px 6px 1fr;align-items:center;gap:10px;padding:6px 4px;font-size:12px;border-radius:4px;}
+  .feed-item:hover{background:var(--panel-2);}
+  .feed-item .ft{font-family:'JetBrains Mono',monospace;color:var(--ink-dim);font-size:11px;}
+  .feed-item .fd{width:5px;height:5px;border-radius:50%;}
+  .feed-item.air .fd{background:var(--air);} .feed-item.surf .fd{background:var(--surf);} .feed-item.sub .fd{background:var(--sub);} .feed-item.alert .fd{background:var(--threat);}
+  .feed-item .fm{color:var(--ink);}
+  .feed-item.alert .fm{color:var(--threat);font-weight:500;}
+
+  /* ============ SHIFT (SIGNAL DETECTION) ============ */
+  .shift-wrap{display:flex;flex-direction:column;gap:16px;height:calc(100vh - 100px);}
+  .shift-topbar{display:grid;grid-template-columns:auto auto auto 1fr auto;gap:24px;align-items:center;padding:14px 20px;background:var(--panel);border:1px solid var(--border);border-radius:10px;}
+  .metric{display:flex;flex-direction:column;gap:2px;}
+  .metric .ml{font-size:10.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;}
+  .metric .mv{font-size:18px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+  .metric .mv.good{color:var(--accent);}
+  .integrity-wrap{display:flex;flex-direction:column;gap:6px;}
+  .integrity-wrap .ml{font-size:10.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;display:flex;justify-content:space-between;}
+  .integrity-track{height:6px;background:var(--panel-3);border-radius:3px;overflow:hidden;}
+  .integrity-fill{height:100%;background:var(--accent);transition:width .4s var(--tx),background .3s;border-radius:3px;}
+  .btn{padding:9px 16px;border-radius:6px;border:1px solid var(--border-strong);background:var(--panel-2);color:var(--ink);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s var(--tx);display:inline-flex;align-items:center;gap:8px;}
+  .btn:hover{background:var(--panel-3);}
+  .btn-primary{background:var(--accent);color:#000;border-color:var(--accent);}
+  .btn-primary:hover{background:var(--accent-dim);}
+  .btn-primary.active{background:var(--panel-2);color:var(--ink);border-color:var(--border-strong);}
+  .btn-primary.active::before{content:'●';color:var(--accent);animation:pulse 1.5s ease-in-out infinite;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  .shift-body{display:grid;grid-template-columns:1fr 380px;gap:16px;flex:1;min-height:0;}
+  .shift-scope{background:#050506;border:1px solid var(--border);border-radius:10px;position:relative;overflow:hidden;}
+  .shift-scope canvas{display:block;width:100%;height:100%;}
+  .zone-hint{position:absolute;top:14px;left:16px;font-size:11px;color:var(--ink-mute);pointer-events:none;}
+  .zone-hint b{color:var(--ink);}
+
+  /* investigation console */
+  .console{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;overflow-y:auto;}
+  .console-empty{display:flex;flex-direction:column;justify-content:center;align-items:center;flex:1;text-align:center;color:var(--ink-mute);padding:32px 16px;}
+  .console-empty h3{font-size:15px;color:var(--ink);margin-bottom:8px;font-weight:600;}
+  .console-empty p{font-size:13px;line-height:1.6;color:var(--ink-mute);max-width:280px;}
+  .console-empty svg{width:36px;height:36px;color:var(--ink-dim);margin-bottom:14px;}
+
+  .investigate-card{display:flex;flex-direction:column;gap:16px;}
+  .ic-head{display:flex;align-items:center;gap:12px;}
+  .ic-badge{width:40px;height:40px;border-radius:8px;display:grid;place-items:center;color:#000;font-weight:700;font-size:15px;flex-shrink:0;}
+  .ic-title{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+  .ic-meta{font-size:11.5px;color:var(--ink-mute);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+  .ic-urgent{margin-left:auto;font-size:10.5px;padding:4px 8px;border-radius:4px;background:rgba(248,113,113,.12);color:var(--threat);font-weight:600;letter-spacing:0.04em;}
+
+  /* evidence panel — the new mechanic */
+  .evidence-section{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .evidence-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .evidence-head .eh-title{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;}
+  .evidence-head .eh-count{font-size:11px;color:var(--ink-mute);font-family:'JetBrains Mono',monospace;}
+  .evidence-list{display:flex;flex-direction:column;gap:8px;}
+  .evidence-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:6px;background:var(--panel-3);border:1px solid var(--border);cursor:pointer;transition:all .15s var(--tx);}
+  .evidence-row:hover:not(.gathered){border-color:var(--accent-border);background:var(--panel);}
+  .evidence-row.gathered{background:var(--accent-bg);border-color:var(--accent-border);cursor:default;}
+  .ev-icon{width:16px;height:16px;display:grid;place-items:center;color:var(--ink-mute);}
+  .evidence-row.gathered .ev-icon{color:var(--accent);}
+  .ev-label{font-size:12.5px;font-weight:500;}
+  .ev-desc{font-size:11px;color:var(--ink-mute);margin-top:1px;}
+  .ev-value{font-size:11.5px;font-family:'JetBrains Mono',monospace;color:var(--ink-mute);text-align:right;}
+  .evidence-row.gathered .ev-value{color:var(--ink);}
+  .ev-time{font-size:10px;color:var(--ink-dim);}
+
+  /* confidence assessment */
+  .conf-panel{padding:14px;background:var(--panel-2);border:1px solid var(--border);border-radius:8px;}
+  .conf-question{font-size:13px;font-weight:500;margin-bottom:12px;}
+  .conf-slider-wrap{padding:0 4px;}
+  .conf-slider{width:100%;-webkit-appearance:none;appearance:none;height:6px;background:var(--panel-3);border-radius:3px;outline:none;background:linear-gradient(90deg,var(--neutral) 0%,var(--caution) 50%,var(--threat) 100%);}
+  .conf-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:18px;height:18px;background:var(--ink);border:3px solid var(--bg);border-radius:50%;cursor:pointer;box-shadow:0 0 0 1px var(--border-strong);}
+  .conf-slider::-moz-range-thumb{width:18px;height:18px;background:var(--ink);border:3px solid var(--bg);border-radius:50%;cursor:pointer;}
+  .conf-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.06em;margin-top:8px;font-weight:600;}
+  .conf-readout{text-align:center;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--ink-mute);}
+  .conf-readout .cv{color:var(--ink);font-weight:600;font-size:14px;}
+
+  /* action buttons */
+  .action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .action-btn{padding:11px 14px;border-radius:6px;border:1px solid var(--border-strong);background:var(--panel-2);color:var(--ink);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s var(--tx);display:flex;align-items:center;justify-content:center;gap:6px;}
+  .action-btn.clear{border-color:rgba(74,222,128,.3);color:var(--neutral);}
+  .action-btn.clear:hover{background:rgba(74,222,128,.1);}
+  .action-btn.escalate{border-color:rgba(248,113,113,.3);color:var(--threat);}
+  .action-btn.escalate:hover{background:rgba(248,113,113,.1);}
+
+  /* verdict toast */
+  .verdict{padding:12px 14px;border-radius:6px;font-size:12.5px;line-height:1.5;animation:slideIn .3s var(--tx);}
+  .verdict.right{background:rgba(74,222,128,.1);color:var(--neutral);border:1px solid rgba(74,222,128,.3);}
+  .verdict.wrong{background:rgba(248,113,113,.1);color:var(--threat);border:1px solid rgba(248,113,113,.3);}
+  .verdict b{font-weight:600;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* calibration score */
+  .calib-brief{padding:10px 12px;background:var(--panel-2);border-radius:6px;font-size:11.5px;color:var(--ink-mute);line-height:1.5;border-left:2px solid var(--unknown);}
+  .calib-brief b{color:var(--ink);}
+
+  /* ============ ENLIST ============ */
+  .enlist-wrap{max-width:1080px;margin:0 auto;padding:16px 0 40px;}
+  .enlist-head{margin-bottom:32px;}
+  .enlist-eyebrow{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:8px;}
+  .enlist-title{font-size:32px;font-weight:600;letter-spacing:-0.03em;margin-bottom:10px;}
+  .enlist-sub{color:var(--ink-mute);font-size:15px;line-height:1.6;max-width:560px;}
+  .class-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+  .class-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:24px 24px 20px;cursor:pointer;transition:all .25s var(--tx);position:relative;overflow:hidden;--cc:var(--accent);}
+  .class-card::before{content:'';position:absolute;inset:0;background:radial-gradient(600px 200px at 50% -20%,var(--cc),transparent 60%);opacity:0.06;pointer-events:none;transition:opacity .25s var(--tx);}
+  .class-card:hover{border-color:var(--border-strong);transform:translateY(-2px);}
+  .class-card:hover::before{opacity:0.12;}
+  .class-card.sel{border-color:var(--cc);box-shadow:0 0 0 1px var(--cc), 0 20px 60px -20px var(--cc);}
+  .class-card.sel::before{opacity:0.18;}
+  .class-card .cc-check{position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border-strong);display:grid;place-items:center;transition:all .2s var(--tx);z-index:2;}
+  .class-card.sel .cc-check{background:var(--cc);border-color:var(--cc);}
+  .class-card.sel .cc-check::after{content:'';width:8px;height:5px;border-left:2px solid #000;border-bottom:2px solid #000;transform:rotate(-45deg) translateY(-1px);}
+  .class-glyph{position:absolute;top:20px;left:20px;font-size:22px;font-weight:700;color:var(--cc);opacity:0.9;letter-spacing:-0.04em;z-index:2;}
+  .class-render{height:130px;display:grid;place-items:center;margin:16px 0 20px;position:relative;}
+  .class-render::before{content:'';position:absolute;inset:0;background:radial-gradient(140px 140px at 50% 50%,var(--cc),transparent 65%);opacity:0.15;filter:blur(20px);}
+  .class-render svg{position:relative;z-index:1;filter:drop-shadow(0 0 12px rgba(255,255,255,0.05));}
+  .class-domain{font-size:11px;color:var(--cc);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:6px;opacity:0.9;}
+  .class-name{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px;}
+  .class-desc{font-size:13px;color:var(--ink-mute);line-height:1.55;margin-bottom:18px;min-height:60px;}
+  .stat-line{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px;}
+  .stat-line .sl{color:var(--ink-mute);}
+  .pips{display:flex;gap:3px;}
+  .pip{width:20px;height:4px;border-radius:1px;background:var(--panel-3);}
+  .pip.on{background:var(--cc);opacity:0.85;}
+  .craft-badge{margin-top:16px;padding:10px 12px;background:var(--panel-2);border-radius:6px;font-size:11px;color:var(--ink-mute);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .craft-badge b{color:var(--ink);font-weight:500;}
+  .craft-badge .cb-label{font-size:10px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.06em;}
+  .enlist-cta{display:flex;justify-content:flex-end;}
+  .enlist-cta .btn{padding:11px 24px;font-size:14px;}
+
+  /* ============ OPERATOR ============ */
+  .op-wrap{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .op-hero{grid-column:1 / 3;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:32px;display:grid;grid-template-columns:200px 1fr;gap:32px;align-items:center;}
+  .op-avatar-frame{width:200px;height:240px;background:radial-gradient(circle at 50% 30%,var(--accent-bg),transparent 70%);border-radius:12px;display:grid;place-items:center;}
+  .op-info{}
+  .op-eyebrow{font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:6px;}
+  .op-name{font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px;}
+  .op-rank-line{font-size:14px;color:var(--ink-mute);margin-bottom:20px;}
+  .xp-bar{margin-bottom:20px;}
+  .xp-labels{display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;}
+  .xp-labels span:first-child{color:var(--ink);font-weight:500;}
+  .xp-labels span:last-child{color:var(--ink-mute);}
+  .xp-track{height:5px;background:var(--panel-3);border-radius:3px;overflow:hidden;}
+  .xp-fill{height:100%;background:var(--accent);transition:width .5s var(--tx);border-radius:3px;}
+  .xp-numbers{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-dim);margin-top:5px;font-family:'JetBrains Mono',monospace;}
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .kpi{background:var(--panel-2);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .kpi .kl{font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin-bottom:6px;}
+  .kpi .kn{font-size:22px;font-weight:600;font-family:'JetBrains Mono',monospace;}
+  .kpi .kn.good{color:var(--accent);}
+  .op-col{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;}
+  .op-col h3{font-size:12px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;margin-bottom:14px;}
+  .slot-label{font-size:11px;color:var(--ink-mute);text-transform:uppercase;letter-spacing:0.06em;font-weight:600;margin:14px 0 8px;padding-top:12px;border-top:1px solid var(--border);}
+  .slot-label:first-of-type{margin-top:0;padding-top:0;border-top:none;}
+  .gear-slot{display:grid;grid-template-columns:32px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:6px;background:var(--panel-2);border:1px solid var(--border);margin-bottom:6px;cursor:pointer;transition:all .15s var(--tx);}
+  .gear-slot:hover:not(.locked){border-color:var(--border-strong);}
+  .gear-slot.equipped{border-color:var(--accent-border);background:var(--accent-bg);}
+  .gear-slot.locked{opacity:0.45;cursor:not-allowed;}
+  .g-icon{width:32px;height:32px;border-radius:6px;display:grid;place-items:center;background:var(--panel-3);font-size:14px;color:var(--ink-mute);}
+  .gear-slot.equipped .g-icon{background:var(--accent);color:#000;}
+  .g-name{font-size:13px;font-weight:500;}
+  .g-type{font-size:11px;color:var(--ink-mute);margin-top:1px;}
+  .g-tier{font-size:10px;padding:3px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600;color:var(--ink-mute);background:var(--panel-3);}
+  .g-tier.uncommon{color:#4ade80;background:rgba(74,222,128,.12);}
+  .g-tier.rare{color:#60a5fa;background:rgba(96,165,250,.12);}
+  .g-tier.legendary{color:#fbbf24;background:rgba(251,191,36,.12);}
+
+  /* toast */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--panel-2);border:1px solid var(--border-strong);border-radius:8px;padding:12px 20px;display:flex;align-items:center;gap:12px;transition:all .3s var(--tx);z-index:100;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast .tk{font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:0.08em;font-weight:600;}
+  .toast .tm{font-size:13px;font-weight:500;margin-top:1px;}
+
+  /* footer */
+  .footer{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--ink-dim);font-family:'JetBrains Mono',monospace;pointer-events:none;}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+    .sidebar{flex-direction:row;padding:8px;overflow-x:auto;}
+    .brand,.nav-label,.sidebar-foot{display:none;}
+    .nav-item{flex-shrink:0;}
+    .deck-grid{grid-template-columns:1fr;grid-template-rows:auto 300px auto auto;height:auto;}
+    .card.map{grid-column:1;grid-row:2;}
+    .card.feed{grid-column:1;grid-row:4;}
+    .shift-body{grid-template-columns:1fr;grid-template-rows:280px 1fr;}
+    .shift-topbar{grid-template-columns:repeat(2,1fr);gap:12px;}
+    .op-wrap{grid-template-columns:1fr;}
+    .op-hero{grid-column:1;grid-template-columns:1fr;text-align:center;}
+    .op-avatar-frame{margin:0 auto;}
+    .class-grid{grid-template-columns:1fr;}
+    body{overflow-y:auto;height:auto;}
+    .page{position:relative;height:auto;}
+    .stage{overflow:visible;height:auto;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 14 L10 12 L11 7 L14 8 L15 5 L18 8 L21 10 L18 12 L20 15 L15 14 L14 18 L11 15 L7 17 L8 14 Z"/></svg></div>
+      <div class="brand-name">Raven Defense</div>
+    </div>
+    <div class="nav-label">Workspace</div>
+    <div class="nav-item active" data-page="deck">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/></svg>
+      Deck<span class="nav-dot"></span>
+    </div>
+    <div class="nav-item" data-page="score">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4 L20 4 L20 20 L4 20 Z"/><path d="M4 14 L9 9 L13 13 L20 6"/></svg>
+      Shift<span class="nav-dot"></span>
+    </div>
+    <div class="nav-label">Operator</div>
+    <div class="nav-item" data-page="enlist">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 L15 9 L22 10 L17 15 L18 22 L12 18.5 L6 22 L7 15 L2 10 L9 9 Z"/></svg>
+      Enlist<span class="nav-dot"></span>
+    </div>
+    <div class="nav-item" data-page="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21 C4 16 8 13 12 13 C16 13 20 16 20 21"/></svg>
+      Operator<span class="nav-dot"></span>
+    </div>
+    <div class="sidebar-foot">
+      <div class="kv"><span>Session</span><span id="sf-time" class="mono">--:--</span></div>
+      <div class="kv"><span>Build</span><span class="mono">v3.0</span></div>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <!-- DECK -->
+    <section class="page show" id="page-deck">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Live Deck</div>
+          <div class="page-sub">Fused multi-domain awareness · simulation</div>
+        </div>
+        <div class="page-meta">
+          <span><span class="status-dot"></span>Feeds nominal</span>
+          <span class="mono" id="clock">--:--:--Z</span>
+        </div>
+      </div>
+      <div class="deck-grid">
+        <div class="card">
+          <div class="card-title">Domains</div>
+          <div class="domain-list">
+            <div class="domain-item air" data-layer="air"><div class="di-icon">A</div><div class="di-name">Aerial</div><div class="di-count" id="ct-air">0</div></div>
+            <div class="domain-item surf" data-layer="surf"><div class="di-icon">S</div><div class="di-name">Surface</div><div class="di-count" id="ct-surf">0</div></div>
+            <div class="domain-item sub" data-layer="sub"><div class="di-icon">D</div><div class="di-name">Subsurface</div><div class="di-count" id="ct-sub">0</div></div>
+          </div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--neutral)"></span><span class="l-name">Neutral</span><span class="l-desc">friendly / known</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--unknown)"></span><span class="l-name">Unknown</span><span class="l-desc">unidentified</span></div>
+            <div class="legend-item"><span class="legend-swatch" style="background:var(--threat)"></span><span class="l-name">Review</span><span class="l-desc">flagged</span></div>
+          </div>
+        </div>
+        <div class="card map"><canvas id="map"></canvas>
+          <div class="map-overlay">Sector <b>Delta-7</b> · <span id="contactcount">0</span> active tracks · range 120 nmi</div>
+          <div class="map-hint">Click any contact to inspect</div>
+        </div>
+        <div class="card" id="detail">
+          <div class="card-title">Contact Detail</div>
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>
+            <div class="es-msg">No contact selected.<br>Click a marker on the deck to pull its track data.</div>
+          </div>
+        </div>
+        <div class="card feed">
+          <div class="card-title">Live Event Feed</div>
+          <div class="feed-list" id="feed"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHIFT -->
+    <section class="page" id="page-score">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Watch Shift</div>
+          <div class="page-sub">Signal-detection drill · calibrate confidence, then call</div>
+        </div>
+      </div>
+      <div class="shift-wrap">
+        <div class="shift-topbar">
+          <div class="metric"><span class="ml">Score</span><span class="mv" id="g-score">0</span></div>
+          <div class="metric"><span class="ml">Calibration</span><span class="mv good" id="g-calib">—</span></div>
+          <div class="metric"><span class="ml">Streak</span><span class="mv" id="g-streak">0</span></div>
+          <div class="integrity-wrap">
+            <div class="ml"><span>Sector Integrity</span><span id="integrity-pct" class="mono">100%</span></div>
+            <div class="integrity-track"><div class="integrity-fill" id="integrity-fill" style="width:100%"></div></div>
+          </div>
+          <button class="btn btn-primary" id="g-start">Begin Shift</button>
+        </div>
+        <div class="shift-body">
+          <div class="shift-scope"><canvas id="game"></canvas>
+            <div class="zone-hint">Protected zone: <b>Sector center</b> · dashed ring<br><span style="color:var(--ink-dim);font-size:10.5px;">Contacts auto-select in the console →</span></div>
+          </div>
+          <div class="console" id="console"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ENLIST -->
+    <section class="page" id="page-enlist">
+      <div class="enlist-wrap">
+        <div class="enlist-head">
+          <div class="enlist-eyebrow">Operator Registration</div>
+          <div class="enlist-title">Choose Your Domain</div>
+          <div class="enlist-sub">Your domain sets your craft, your avatar class, and how you move through the sector. You can re-enlist anytime.</div>
+        </div>
+        <div class="class-grid" id="classrow"></div>
+        <div class="enlist-cta"><button class="btn btn-primary" id="enl-confirm" disabled>Select a domain</button></div>
+      </div>
+    </section>
+
+    <!-- OPERATOR -->
+    <section class="page" id="page-stats">
+      <div class="page-head">
+        <div>
+          <div class="page-title">Operator Profile</div>
+          <div class="page-sub">Loadout, progression, and shift performance</div>
+        </div>
+      </div>
+      <div class="op-wrap">
+        <div class="op-hero">
+          <div class="op-avatar-frame" id="avatar"></div>
+          <div class="op-info">
+            <div class="op-eyebrow" id="op-eyebrow">Operator</div>
+            <div class="op-name" id="op-name">Cipher-7</div>
+            <div class="op-rank-line" id="op-rank">Ensign</div>
+            <div class="xp-bar">
+              <div class="xp-labels"><span id="xp-rank">Ensign</span><span id="xp-next">→ Vigil</span></div>
+              <div class="xp-track"><div class="xp-fill" id="xp-fill" style="width:0%"></div></div>
+              <div class="xp-numbers"><span id="xp-val">0 XP</span><span id="xp-need">100 XP to rank up</span></div>
+            </div>
+            <div class="kpi-row">
+              <div class="kpi"><div class="kl">Reads</div><div class="kn" id="op-reads">0</div></div>
+              <div class="kpi"><div class="kl">Calibration</div><div class="kn good" id="op-acc">—</div></div>
+              <div class="kpi"><div class="kl">Best streak</div><div class="kn" id="op-streak">0</div></div>
+              <div class="kpi"><div class="kl">Shifts</div><div class="kn" id="op-shifts">0</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="op-col"><h3>Loadout</h3><div id="op-left"></div></div>
+        <div class="op-col"><h3>Vault</h3><div id="op-right"></div></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"><div><div class="tk" id="toast-k">RANK UP</div><div class="tm" id="toast-m"></div></div></div>
+<div class="footer">Raven Defense · v3.0 · interactive prototype</div>
+
+<script>
+/* ============ CORE ============ */
+const COLORS={air:'#60a5fa',surf:'#fbbf24',sub:'#f472b6',neutral:'#4ade80',unknown:'#a78bfa',threat:'#f87171'};
+const callsigns={air:['SKYHAWK','RAVEN','COURIER','HALO','DRIFTER','VECTOR'],surf:['MARINER','TIDEWATCH','HARBOR','CARGO','PATROL'],sub:['ABYSS','SILENT','GLIDER','DEEPROVE','ECHO']};
+const types={air:['Fixed-wing UAV','Quad UAS','Patrol aircraft','High-alt drone'],surf:['Container vessel','Patrol craft','Survey ship','Fishing trawler'],sub:['UUV glider','Sonar contact','Subsurface track','AUV']};
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const layerName={air:'AERIAL',surf:'SURFACE',sub:'SUBSURFACE'};
+let DPR=window.devicePixelRatio||1;
+
+/* progression */
+const RANKS=['Ensign','Vigil','Watch Officer','Lieutenant','Commander','Captain','Fleet Watch'];
+const state={xp:0,reads:0,brierSum:0,brierN:0,bestStreak:0,shifts:0,unlocked:{},domain:null};
+function rankIndex(){let lvl=0,need=100,xp=state.xp;while(xp>=need&&lvl<RANKS.length-1){xp-=need;lvl++;need=Math.round(need*1.6);}return{lvl,into:xp,need};}
+function calibScore(){return state.brierN?Math.round((1-state.brierSum/state.brierN)*100):null;}
+
+const GEAR={
+  sensor:[
+    {id:'snr0',name:'Mk-I Passive Array',type:'Sensor Suite',tier:'common',icon:'◉',ping:1.0,unlockAt:0},
+    {id:'snr1',name:'Phased Pulse Array',type:'Sensor Suite',tier:'uncommon',icon:'◈',ping:1.4,unlockAt:1},
+    {id:'snr2',name:'Quantum Fusion Grid',type:'Sensor Suite',tier:'rare',icon:'◆',ping:1.9,unlockAt:3},
+    {id:'snr3',name:'AEGIS Deep-Look',type:'Sensor Suite',tier:'legendary',icon:'✦',ping:2.6,unlockAt:5},
+  ],
+  scope:[
+    {id:'scp0',name:'Standard',type:'Scope Skin',tier:'common',icon:'●',hue:'#4ade80',unlockAt:0},
+    {id:'scp1',name:'Amber Tactical',type:'Scope Skin',tier:'uncommon',icon:'●',hue:'#fbbf24',unlockAt:2},
+    {id:'scp2',name:'Void Violet',type:'Scope Skin',tier:'rare',icon:'●',hue:'#a78bfa',unlockAt:4},
+  ],
+  suit:[
+    {id:'st0',name:'Cadet Shell',type:'Operator Suit',tier:'common',icon:'▲',suit:'#2a4238',accent:'#4ade80',unlockAt:0},
+    {id:'st1',name:'Vanguard Plate',type:'Operator Suit',tier:'uncommon',icon:'▲',suit:'#2f6d5a',accent:'#22c55e',unlockAt:1},
+    {id:'st2',name:'Spectre Weave',type:'Operator Suit',tier:'rare',icon:'▲',suit:'#4a3d6b',accent:'#a78bfa',unlockAt:3},
+    {id:'st3',name:'Sovereign Aegis',type:'Operator Suit',tier:'legendary',icon:'▲',suit:'#6b5320',accent:'#fbbf24',unlockAt:6},
+  ],
+  station:[
+    {id:'stn0',name:'Picket Buoy',type:'Command Station',tier:'common',icon:'◇',unlockAt:0},
+    {id:'stn1',name:'Coastal Watchtower',type:'Command Station',tier:'uncommon',icon:'△',unlockAt:2},
+    {id:'stn2',name:'Orbital Relay',type:'Command Station',tier:'legendary',icon:'✦',unlockAt:5},
+  ],
+};
+const equipped={sensor:'snr0',scope:'scp0',suit:'st0',station:'stn0'};
+Object.values(GEAR).flat().forEach(g=>{if(g.unlockAt===0)state.unlocked[g.id]=true;});
+function gearById(id){return Object.values(GEAR).flat().find(g=>g.id===id);}
+function scopeHue(){return gearById(equipped.scope).hue;}
+
+/* nav */
+const pages={deck:document.getElementById('page-deck'),score:document.getElementById('page-score'),stats:document.getElementById('page-stats'),enlist:document.getElementById('page-enlist')};
+document.querySelectorAll('.nav-item').forEach(b=>{b.addEventListener('click',()=>{
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  Object.values(pages).forEach(p=>p.classList.remove('show'));const pg=b.dataset.page;pages[pg].classList.add('show');
+  if(pg==='deck')requestAnimationFrame(resizeMap);if(pg==='score')requestAnimationFrame(resizeGame);if(pg==='stats')renderOperator();if(pg==='enlist')renderEnlist();
+});});
+
+/* ============ SCOPE DRAWING ============ */
+function drawScope(g,w,h,list,onlyLayers,hue,zone){
+  if(!w||!h)return;const HUE=hue||'#4ade80';
+  g.clearRect(0,0,w,h);g.fillStyle='#050506';g.fillRect(0,0,w,h);
+  // subtle grid
+  g.strokeStyle='rgba(255,255,255,.03)';g.lineWidth=1;const gs=50;
+  for(let x=0;x<w;x+=gs){g.beginPath();g.moveTo(x,0);g.lineTo(x,h);g.stroke();}
+  for(let y=0;y<h;y+=gs){g.beginPath();g.moveTo(0,y);g.lineTo(w,y);g.stroke();}
+  const cx=w/2,cy=h/2;g.strokeStyle=HUE+'18';g.lineWidth=1;
+  for(let i=1;i<=4;i++){g.beginPath();g.arc(cx,cy,(Math.min(w,h)/2)*(i/4.2),0,7);g.stroke();}
+  // sweep
+  try{if(typeof g.createConicGradient==='function'){const sw=((Date.now()/26)%360)*Math.PI/180;const grd=g.createConicGradient(sw,cx,cy);grd.addColorStop(0,HUE+'20');grd.addColorStop(0.1,HUE+'00');grd.addColorStop(1,HUE+'00');g.fillStyle=grd;g.beginPath();g.arc(cx,cy,Math.min(w,h)/2,0,7);g.fill();}}catch(e){}
+  // protected zone
+  if(zone){g.beginPath();g.arc(cx,cy,zone*Math.min(w,h),0,7);g.strokeStyle='rgba(74,222,128,.4)';g.setLineDash([5,5]);g.lineWidth=1.5;g.stroke();g.setLineDash([]);g.fillStyle='rgba(74,222,128,.04)';g.fill();}
+  // contacts
+  list.forEach(c=>{if(onlyLayers&&!onlyLayers[c.layer])return;
+    const px=c.x*w,py=c.y*h;
+    if(c.trail&&c.trail.length){g.beginPath();c.trail.forEach((t,i)=>{i?g.lineTo(t.x,t.y):g.moveTo(t.x,t.y);});g.strokeStyle=COLORS[c.layer]+'44';g.lineWidth=1.5;g.stroke();}
+    const col=COLORS[(c.revealed===false)?'unknown':c.cls];
+    if(window.selected===c.id){
+      const t=Date.now()/1000;
+      // outer expanding halo (pulses out and fades)
+      const pulseR = 22 + (Math.sin(t*2)*0.5+0.5)*18;
+      const pulseA = 0.55 - (Math.sin(t*2)*0.5+0.5)*0.4;
+      g.beginPath();g.arc(px,py,pulseR,0,7);g.strokeStyle='#4ade80';g.lineWidth=2;g.globalAlpha=pulseA;g.stroke();g.globalAlpha=1;
+      // solid target ring
+      g.beginPath();g.arc(px,py,18,0,7);g.strokeStyle='#4ade80';g.lineWidth=2.5;g.stroke();
+      // inner ring
+      g.beginPath();g.arc(px,py,11,0,7);g.strokeStyle='#4ade80';g.lineWidth=1;g.globalAlpha=0.55;g.stroke();g.globalAlpha=1;
+      // thick corner brackets
+      const s=24;g.strokeStyle='#4ade80';g.lineWidth=2.5;
+      [[[-1,-1,1,0],[-1,-1,0,1]],[[1,-1,-1,0],[1,-1,0,1]],[[-1,1,1,0],[-1,1,0,-1]],[[1,1,-1,0],[1,1,0,-1]]].forEach(cnr=>{cnr.forEach(([sx,sy,dx,dy])=>{g.beginPath();g.moveTo(px+sx*s,py+sy*s);g.lineTo(px+sx*s+dx*8,py+sy*s+dy*8);g.stroke();});});
+      // line from target to right edge of scope (points at console)
+      g.beginPath();g.moveTo(px+s+8,py);g.lineTo(w-4,py);g.strokeStyle='#4ade80';g.lineWidth=1;g.globalAlpha=0.4;g.setLineDash([2,4]);g.stroke();g.setLineDash([]);g.globalAlpha=1;
+      // arrow head at right edge
+      g.beginPath();g.moveTo(w-4,py);g.lineTo(w-10,py-4);g.lineTo(w-10,py+4);g.closePath();g.fillStyle='#4ade80';g.globalAlpha=0.5;g.fill();g.globalAlpha=1;
+    }
+    if(c.tracked){g.beginPath();g.arc(px,py,13,0,7);g.setLineDash([3,3]);g.strokeStyle=COLORS.unknown;g.lineWidth=1;g.stroke();g.setLineDash([]);}
+    if(c.flash){g.beginPath();g.arc(px,py,20*(1+(1-(c.flashA||0))),0,7);g.strokeStyle=c.flash;g.lineWidth=2;g.globalAlpha=Math.max(0,c.flashA||0);g.stroke();g.globalAlpha=1;}
+    if(c.danger>0.6){g.beginPath();g.arc(px,py,11+Math.sin(Date.now()/140)*2,0,7);g.strokeStyle=COLORS.threat;g.lineWidth=1.5;g.globalAlpha=.55;g.stroke();g.globalAlpha=1;}
+    g.fillStyle=col;g.beginPath();
+    if(c.layer==='air'){const a=(c.heading||0)*Math.PI/180;for(let i=0;i<3;i++){const ang=a+i*2.094,r=i===0?9:6;const xx=px+Math.cos(ang)*r,yy=py+Math.sin(ang)*r;i?g.lineTo(xx,yy):g.moveTo(xx,yy);}g.closePath();}
+    else if(c.layer==='surf'){g.rect(px-6,py-6,12,12);}
+    else{for(let i=0;i<6;i++){const ang=i*1.047;const xx=px+Math.cos(ang)*7,yy=py+Math.sin(ang)*7;i?g.lineTo(xx,yy):g.moveTo(xx,yy);}g.closePath();}
+    g.fill();
+  });
+  if(c=>c.flashA!==undefined){list.forEach(c=>{if(c.flashA!==undefined){c.flashA-=0.02;if(c.flashA<=0){c.flash=null;c.flashA=undefined;}}});}
+}
+
+/* ============ DECK PAGE ============ */
+const canvas=document.getElementById('map'),ctx=canvas.getContext('2d');let W=0,H=0;
+function resizeMap(){DPR=window.devicePixelRatio||1;const r=canvas.getBoundingClientRect();W=r.width||canvas.parentElement.clientWidth;H=r.height||canvas.parentElement.clientHeight;if(!W||!H){requestAnimationFrame(resizeMap);return;}canvas.width=W*DPR;canvas.height=H*DPR;ctx.setTransform(DPR,0,0,DPR,0,0);}
+new ResizeObserver(resizeMap).observe(canvas);
+const layerOn={air:true,surf:true,sub:true};let contacts=[],cid=1;window.selected=null;
+function spawn(layer){const cls=Math.random()<0.6?'neutral':(Math.random()<0.55?'unknown':'threat');const angle=Math.random()*Math.PI*2,rad=Math.random()*0.42+0.05;
+  const c={id:'TRK-'+String(cid++).padStart(3,'0'),layer,cls,call:rnd(callsigns[layer])+'-'+Math.floor(Math.random()*90+10),type:rnd(types[layer]),
+    x:0.5+Math.cos(angle)*rad,y:0.5+Math.sin(angle)*rad,heading:Math.random()*360,
+    speed:layer==='air'?(120+Math.random()*340):layer==='surf'?(6+Math.random()*22):(2+Math.random()*8),
+    alt:layer==='air'?Math.floor(Math.random()*38000+500):layer==='sub'?-Math.floor(Math.random()*600+30):0,
+    conf:layer==='sub'?(40+Math.random()*35):(78+Math.random()*21),trail:[],revealed:true};
+  contacts.push(c);return c;}
+['air','air','air','surf','surf','sub','sub'].forEach(spawn);
+function step(){contacts.forEach(c=>{const spd=c.speed/(c.layer==='air'?42000:c.layer==='surf'?5200:3400);const rad=c.heading*Math.PI/180;c.x+=Math.cos(rad)*spd;c.y+=Math.sin(rad)*spd;
+  if(c.x<0.04||c.x>0.96){c.heading=180-c.heading;c.x=Math.max(0.04,Math.min(0.96,c.x));}if(c.y<0.04||c.y>0.96){c.heading=-c.heading;c.y=Math.max(0.04,Math.min(0.96,c.y));}
+  if(Math.random()<0.02)c.heading+=(Math.random()-0.5)*30;c.heading=(c.heading+360)%360;const p={x:c.x*W,y:c.y*H};c.trail.push(p);if(c.trail.length>26)c.trail.shift();});}
+function deckLoop(){if(pages.deck.classList.contains('show')){step();drawScope(ctx,W,H,contacts,layerOn,scopeHue(),null);}requestAnimationFrame(deckLoop);}deckLoop();
+function counts(){const c={air:0,surf:0,sub:0};contacts.forEach(x=>c[x.layer]++);document.getElementById('ct-air').textContent=c.air;document.getElementById('ct-surf').textContent=c.surf;document.getElementById('ct-sub').textContent=c.sub;document.getElementById('contactcount').textContent=contacts.filter(x=>layerOn[x.layer]).length;}
+canvas.addEventListener('click',e=>{const r=canvas.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;let best=null,bd=22;contacts.forEach(c=>{if(!layerOn[c.layer])return;const d=Math.hypot(c.x*W-mx,c.y*H-my);if(d<bd){bd=d;best=c;}});if(best){window.selected=best.id;renderDetail(best);}});
+function renderDetail(c){const badge=c.layer==='air'?'A':c.layer==='surf'?'S':'D';const altLabel=c.layer==='sub'?'Depth':'Altitude';const altVal=c.layer==='surf'?'surface':(c.alt<0?Math.abs(c.alt)+' m':c.alt.toLocaleString()+' ft');
+  document.getElementById('detail').innerHTML=`
+    <div class="card-title">Contact Detail</div>
+    <div class="contact-head"><div class="contact-badge" style="background:${COLORS[c.layer]}">${badge}</div><div><div class="contact-name">${c.call}</div><div class="contact-meta">${c.id} · ${c.type}</div></div></div>
+    <div class="class-pills"><div class="class-pill ${c.cls==='neutral'?'on-n':''}">NEUTRAL</div><div class="class-pill ${c.cls==='unknown'?'on-u':''}">UNKNOWN</div><div class="class-pill ${c.cls==='threat'?'on-t':''}">REVIEW</div></div>
+    <div class="kv-row"><span class="k">Domain</span><span class="v">${layerName[c.layer]}</span></div>
+    <div class="kv-row"><span class="k">Heading</span><span class="v">${Math.round(c.heading)}°</span></div>
+    <div class="kv-row"><span class="k">Speed</span><span class="v">${Math.round(c.speed)} ${c.layer==='air'?'kt':'kn'}</span></div>
+    <div class="kv-row"><span class="k">${altLabel}</span><span class="v">${altVal}</span></div>
+    <div class="kv-row"><span class="k">Track conf.</span><span class="v">${Math.round(c.conf)}%</span></div>
+    <div class="card-note">${c.layer==='sub'?'Subsurface tracks are intermittent and low-confidence — position estimated from sparse sonar returns.':'Track fused from multiple sensor reports. Confidence reflects agreement across feeds.'}</div>`;}
+document.querySelectorAll('.domain-item').forEach(el=>{el.addEventListener('click',()=>{const l=el.dataset.layer;layerOn[l]=!layerOn[l];el.classList.toggle('off',!layerOn[l]);counts();});});
+function tick(){const d=new Date();const el=document.getElementById('clock');if(el)el.textContent=String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')+':'+String(d.getUTCSeconds()).padStart(2,'0')+'Z';const sf=document.getElementById('sf-time');if(sf)sf.textContent=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+setInterval(tick,1000);tick();
+const feed=document.getElementById('feed');const evT=[c=>`New ${layerName[c.layer].toLowerCase()} track — ${c.call}`,c=>`${c.call} course change ${Math.round(c.heading)}°`,c=>`Sensor handoff — ${c.id}`,c=>`${c.call} confidence ${Math.round(c.conf)}%`];
+function pushEvent(){if(!contacts.length)return;const c=rnd(contacts);const el=document.createElement('div');el.className='feed-item '+c.layer;const t=new Date();el.innerHTML=`<div class="ft">${String(t.getUTCHours()).padStart(2,'0')}:${String(t.getUTCMinutes()).padStart(2,'0')}:${String(t.getUTCSeconds()).padStart(2,'0')}</div><div class="fd"></div><div class="fm">${rnd(evT)(c)}</div>`;feed.prepend(el);while(feed.children.length>14)feed.lastChild.remove();}
+setInterval(pushEvent,2200);for(let i=0;i<6;i++)pushEvent();
+setInterval(()=>{if(contacts.length<14&&Math.random()<0.6)spawn(rnd(['air','surf','sub']));else if(contacts.length>5&&Math.random()<0.3){const i=Math.floor(Math.random()*contacts.length);if(contacts[i].id!==window.selected)contacts.splice(i,1);}counts();},3500);
+counts();
+
+/* ============ SHIFT: SIGNAL DETECTION ============ */
+/*
+  How it works:
+  - Contacts arrive with 4 evidence streams (transponder / radar signature / behavior / comms).
+  - Each stream gives a signal (weak/moderate/strong toward threat or benign).
+  - Player gathers evidence (each costs 2 seconds of time), forms confidence via slider (0-100%),
+    then makes a call: CLEAR or ESCALATE.
+  - Scored by BRIER (calibration): how well confidence matches truth. Not just right/wrong.
+  - Threats have subtle asymmetries the player learns over time.
+*/
+const gcanvas=document.getElementById('game'),gctx=gcanvas.getContext('2d');let GW=0,GH=0;
+function resizeGame(){const r=gcanvas.getBoundingClientRect();GW=r.width||gcanvas.parentElement.clientWidth;GH=r.height||gcanvas.parentElement.clientHeight;if(!GW||!GH){requestAnimationFrame(resizeGame);return;}gcanvas.width=GW*DPR;gcanvas.height=GH*DPR;gctx.setTransform(DPR,0,0,DPR,0,0);}
+new ResizeObserver(resizeGame).observe(gcanvas);
+
+// evidence definitions
+const EVIDENCE = {
+  transponder: {label:'IFF Transponder', desc:'Identify-friend-or-foe signal check'},
+  signature:   {label:'Radar Signature', desc:'RCS pattern vs. known asset database'},
+  behavior:    {label:'Movement Pattern', desc:'Course, speed, and deviation from lane'},
+  comms:       {label:'Comms Traffic', desc:'Intercepted transmissions on band'}
+};
+const EVIDENCE_KEYS = Object.keys(EVIDENCE);
+
+let gameOn=false, gC=[], gScore=0, gStreak=0, integrity=1, currentQ=null, shiftReads=0;
+const PROT_ZONE=0.16;
+
+function generateContact(){
+  const layer = rnd(['air','air','surf','sub']);
+  // ground truth: 40% threat base rate
+  const isThreat = Math.random() < 0.4;
+  const angle = Math.random()*Math.PI*2, rad = 0.47;
+  const c = {
+    id:'CON-'+String(gC.length+1).padStart(3,'0'),
+    layer, isThreat,
+    call: rnd(callsigns[layer])+'-'+Math.floor(Math.random()*90+10),
+    type: rnd(types[layer]),
+    x: 0.5+Math.cos(angle)*rad, y: 0.5+Math.sin(angle)*rad,
+    speed: layer==='air'?(200+Math.random()*200):layer==='surf'?(10+Math.random()*15):(3+Math.random()*6),
+    alt: layer==='air'?Math.floor(Math.random()*38000+500):layer==='sub'?-Math.floor(Math.random()*600+30):0,
+    heading: Math.atan2(0.5-Math.sin(angle)*rad,0.5-Math.cos(angle)*rad)*180/Math.PI + (Math.random()-0.5)*30,
+    trail:[], danger:0, handled:false, cls:'unknown', revealed:false,
+    evidence:{}, evidenceGathered:{}
+  };
+  // generate evidence — threats have subtle asymmetries
+  const signals = {threat:1, benign:0};
+  EVIDENCE_KEYS.forEach(k=>{
+    // each evidence has a real information value about the truth
+    const trueSignal = c.isThreat ? 1 : 0;
+    // add noise — some evidence is more reliable than others
+    const reliability = {transponder:0.85, signature:0.7, behavior:0.6, comms:0.55}[k];
+    const gotTruth = Math.random() < reliability;
+    const signal = gotTruth ? trueSignal : (1-trueSignal);
+    // strength: weak/moderate/strong
+    const strengthNum = Math.random();
+    let strength, strengthLabel;
+    if(strengthNum<0.3){strength=0.3;strengthLabel='weak';}
+    else if(strengthNum<0.75){strength=0.6;strengthLabel='moderate';}
+    else{strength=0.9;strengthLabel='strong';}
+    c.evidence[k] = {
+      signal, strength, strengthLabel,
+      reading: signal===1 ? `${strengthLabel} threat indicator` : `${strengthLabel} benign indicator`,
+      raw: k==='transponder' ? (signal===1 ? 'No IFF response · silent' : 'Valid IFF · registered')
+         : k==='signature'   ? (signal===1 ? 'Anomalous RCS · unmatched' : 'Matches civilian profile')
+         : k==='behavior'    ? (signal===1 ? 'Deviating toward zone' : 'Following commercial lane')
+         :                     (signal===1 ? 'Encrypted burst detected' : 'Clear-voice traffic')
+    };
+  });
+  // threats move slightly toward zone (subtle)
+  if(c.isThreat){c.toZone=true;c.speed*=1.1;}
+  return c;
+}
+
+function shiftStep(){
+  gC.forEach(c=>{
+    let hx=Math.cos(c.heading*Math.PI/180), hy=Math.sin(c.heading*Math.PI/180);
+    if(c.toZone && !c.handled){const dx=0.5-c.x,dy=0.5-c.y,dl=Math.hypot(dx,dy)||1;hx=hx*0.88+(dx/dl)*0.12;hy=hy*0.88+(dy/dl)*0.12;}
+    const base=c.speed/(c.layer==='air'?80000:c.layer==='surf'?11000:8000);
+    let spd=base*(0.8+(1-integrity)*0.4);
+    // the contact you're actively investigating slows to a near-crawl — you own it
+    if(window.selected===c.id && !c.handled) spd*=0.15;
+    c.x+=hx*spd; c.y+=hy*spd; c.heading=Math.atan2(hy,hx)*180/Math.PI;
+    c.trail.push({x:c.x*GW,y:c.y*GH}); if(c.trail.length>20)c.trail.shift();
+    const dz=Math.hypot(0.5-c.x,0.5-c.y);
+    c.danger=(c.isThreat&&!c.handled)?(1-Math.min(1,dz/0.4)):0;
+    if(!c.handled && c.isThreat && dz<PROT_ZONE){breach(c);}
+    if(c.x<-0.06||c.x>1.06||c.y<-0.06||c.y>1.06){if(!c.handled&&!c.isThreat)c.handled=true;c.dead=true;}
+  });
+  gC = gC.filter(c=>!c.dead);
+}
+function gameLoop(){if(pages.score.classList.contains('show')){if(gameOn)shiftStep();drawScope(gctx,GW,GH,gC,null,scopeHue(),PROT_ZONE);}requestAnimationFrame(gameLoop);}
+gameLoop();
+
+function setIntegrity(v){
+  integrity=Math.max(0,Math.min(1,v));
+  const fill=document.getElementById('integrity-fill');
+  const pct=document.getElementById('integrity-pct');
+  fill.style.width=(integrity*100)+'%';
+  fill.style.background = integrity>0.5?'var(--accent)':integrity>0.25?'var(--caution)':'var(--threat)';
+  pct.textContent=Math.round(integrity*100)+'%';
+  if(integrity<=0 && gameOn){endShift();}
+}
+function breach(c){c.handled=true;c.flash=COLORS.threat;c.flashA=1;c.revealed=true;c.cls='threat';gStreak=0;setIntegrity(integrity-0.28);renderConsoleEmpty(`<b>Breach — ${c.call}</b> reached the protected zone.<br>Sector integrity dropping. Stay ahead of it.`);updateShiftUI();}
+
+function selectContact(c){window.selected=c.id;currentQ=c;renderInvestigation(c);}
+function renderConsoleEmpty(msg){
+  const html = msg ? `<div class="console-empty"><h3>Sector momentarily clear</h3><p>${msg}</p></div>` :
+    `<div class="console-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 6 V12 L16 14"/></svg>
+      <h3>Watch Shift — Signal Detection</h3>
+      <p>Press <b>Begin Shift</b>. Contacts arrive unidentified. Gather evidence, set your confidence, then call. You're scored on <b>calibration</b> — how well your confidence tracks reality.</p></div>`;
+  document.getElementById('console').innerHTML=html;
+}
+renderConsoleEmpty();
+
+function renderInvestigation(c){
+  const badge=c.layer==='air'?'A':c.layer==='surf'?'S':'D';
+  const gatheredCount=Object.keys(c.evidenceGathered).length;
+  const urgent = c.danger>0.5 ? '<div class="ic-urgent">CLOSING ON ZONE</div>' : '<div class="ic-urgent" style="background:var(--panel-3);color:var(--ink-mute);">AUTO-SELECTED</div>';
+  const tutorial = state._firstShift ? `<div class="calib-brief" style="border-left-color:var(--accent);"><b>How to play:</b> Click each evidence row below to gather it (each takes ~2s). Every reading is a probabilistic clue. Set your confidence with the slider, then <b>Clear</b> or <b>Escalate</b>. You're scored on how well your confidence matches reality.</div>` : '';
+  const evidenceHTML = EVIDENCE_KEYS.map(k=>{
+    const gathered=c.evidenceGathered[k];
+    const ev=c.evidence[k];
+    return `<div class="evidence-row ${gathered?'gathered':''}" data-ev="${k}">
+      <div class="ev-icon">${gathered?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 12 10 18 20 6"/></svg>':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><line x1="12" y1="7" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16.01"/></svg>'}</div>
+      <div><div class="ev-label">${EVIDENCE[k].label}</div><div class="ev-desc">${gathered?ev.raw:EVIDENCE[k].desc}</div></div>
+      <div class="ev-value">${gathered?ev.reading:'<span class="ev-time">+2s</span>'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('console').innerHTML = `
+    <div class="investigate-card">
+      ${tutorial}
+      <div class="ic-head">
+        <div class="ic-badge" style="background:${COLORS[c.layer]}">${badge}</div>
+        <div><div class="ic-title">${c.call}</div><div class="ic-meta">${c.id} · ${c.type} · ${layerName[c.layer]}</div></div>
+        ${urgent}
+      </div>
+      <div class="evidence-section">
+        <div class="evidence-head"><div class="eh-title">Evidence</div><div class="eh-count">${gatheredCount} / 4 gathered</div></div>
+        <div class="evidence-list">${evidenceHTML}</div>
+      </div>
+      <div class="conf-panel">
+        <div class="conf-question">How likely is this a threat?</div>
+        <div class="conf-slider-wrap">
+          <input type="range" min="0" max="100" value="50" class="conf-slider" id="conf-slider">
+          <div class="conf-labels"><span>Certain benign</span><span>Uncertain</span><span>Certain threat</span></div>
+        </div>
+        <div class="conf-readout">Your estimate: <span class="cv" id="conf-readout">50%</span> chance of threat</div>
+      </div>
+      <div class="action-row">
+        <button class="action-btn clear" id="b-clear">✓ Clear (benign)</button>
+        <button class="action-btn escalate" id="b-esc">⚠ Escalate (threat)</button>
+      </div>
+      <div class="calib-brief">You're scored on how well your <b>confidence</b> matches reality, not just being right. A 90% confidence call that's correct scores highest; a 50/50 guess scores neutral either way.</div>
+    </div>`;
+  // wire evidence
+  document.querySelectorAll('.evidence-row').forEach(row=>{
+    row.addEventListener('click',()=>{
+      const k=row.dataset.ev;
+      if(c.evidenceGathered[k]||c.handled)return;
+      c.evidenceGathered[k]=true;
+      renderInvestigation(c);
+    });
+  });
+  // wire slider
+  const slider=document.getElementById('conf-slider');
+  slider.addEventListener('input',e=>{document.getElementById('conf-readout').textContent=e.target.value+'%';});
+  document.getElementById('b-clear').onclick=()=>makeCall(c,'benign',parseInt(slider.value));
+  document.getElementById('b-esc').onclick=()=>makeCall(c,'threat',parseInt(slider.value));
+}
+
+function makeCall(c,call,confPct){
+  if(c.handled)return;
+  state._firstShift=false;
+  c.handled=true; c.revealed=true; c.cls=c.isThreat?'threat':'neutral';
+  const truthNum = c.isThreat ? 1 : 0;
+  // player's confidence THIS IS A THREAT
+  const p = confPct / 100;
+  // Brier score component: (p - truth)^2. Lower is better; we invert & normalize.
+  const brier = Math.pow(p - truthNum, 2);
+  state.brierSum += brier; state.brierN++; shiftReads++; state.reads++;
+  // scoring: correct call * confidence, with Brier bonus
+  const correctCall = (call==='threat') === c.isThreat;
+  let points = 0, verdict, verdictClass;
+  if(correctCall){
+    // score scales with confidence you had in the correct direction
+    const confInCorrect = call==='threat' ? p : (1-p);
+    points = Math.round(10 + confInCorrect * 20 + gStreak * 2);
+    gScore += points; gStreak++; if(gStreak>state.bestStreak)state.bestStreak=gStreak;
+    setIntegrity(integrity + 0.04);
+    addXP(call==='threat' ? 14 : 9);
+    c.flash=COLORS.neutral; c.flashA=1;
+    const conflabel = confInCorrect>0.85 ? 'well-calibrated' : confInCorrect>0.6 ? 'reasonable read' : 'lucky call — low confidence';
+    verdict = `<b>Correct — ${c.call} was ${c.isThreat?'a threat':'benign'}.</b><br>${conflabel}. +${points} pts.`;
+    verdictClass='right';
+  } else {
+    gStreak=0;
+    // false alarm vs miss are penalized differently
+    const penalty = call==='threat' ? 0.14 : 0.24; // miss is worse
+    setIntegrity(integrity - penalty);
+    c.flash=COLORS.threat; c.flashA=1;
+    const confInWrong = call==='threat' ? p : (1-p);
+    const label = confInWrong>0.7 ? '<b>Confidently wrong.</b> Recalibrate.' : '<b>Wrong call, but you weren\'t sure.</b>';
+    const what = call==='neutral' ? `Missed a threat — ${c.call}.` : `False alarm — ${c.call} was benign.`;
+    verdict = `${label}<br>${what}`;
+    verdictClass='wrong';
+  }
+  // show verdict inline
+  const consoleEl=document.getElementById('console');
+  const v=document.createElement('div');v.className='verdict '+verdictClass;v.innerHTML=verdict;
+  consoleEl.querySelector('.investigate-card').appendChild(v);
+  updateShiftUI();
+  setTimeout(()=>{c.dead=true;},1200);
+  currentQ=null;window.selected=null;
+  // auto-advance
+  setTimeout(()=>{
+    const next=gC.find(x=>!x.handled);
+    if(next && gameOn){selectContact(next);}
+    else if(gameOn){renderConsoleEmpty('More inbound. Stay sharp.');}
+  },1600);
+}
+
+function updateShiftUI(){
+  document.getElementById('g-score').textContent=gScore;
+  document.getElementById('g-streak').textContent=gStreak;
+  const cs=calibScore();
+  document.getElementById('g-calib').textContent = cs===null?'—':cs+'%';
+}
+
+document.getElementById('g-start').addEventListener('click',()=>{
+  if(gameOn){endShift();return;}
+  gameOn=true; setIntegrity(1); resizeGame();
+  const btn=document.getElementById('g-start'); btn.textContent='End Shift'; btn.classList.add('active');
+  shiftReads=0; gScore=0; gStreak=0;
+  gC=[]; gC.push(generateContact());
+  selectContact(gC[0]);
+  if(state.shifts===0)state._firstShift=true;
+  updateShiftUI();
+});
+
+setInterval(()=>{if(gameOn && gC.filter(c=>!c.handled).length<2){gC.push(generateContact());}},6000);
+setInterval(()=>{if(gameOn && !currentQ){const pend=gC.filter(c=>!c.handled);if(pend.length){pend.sort((a,b)=>b.danger-a.danger);selectContact(pend[0]);}}},1000);
+gcanvas.addEventListener('click',e=>{const r=gcanvas.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;let best=null,bd=22;gC.forEach(c=>{const d=Math.hypot(c.x*GW-mx,c.y*GH-my);if(d<bd){bd=d;best=c;}});if(best&&!best.handled){selectContact(best);}});
+
+function endShift(){
+  gameOn=false; state.shifts++;
+  const btn=document.getElementById('g-start'); btn.textContent='Begin Shift'; btn.classList.remove('active');
+  const cs=calibScore();
+  document.getElementById('console').innerHTML = `<div class="console-empty">
+    <h3>Shift ended</h3>
+    <p style="margin-bottom:16px;">Score: <b style="color:var(--ink)">${gScore}</b> · Reads: <b style="color:var(--ink)">${shiftReads}</b><br>Calibration: <b style="color:var(--accent)">${cs===null?'—':cs+'%'}</b></p>
+    <p>Check the <b>Operator</b> page for your progress.</p>
+  </div>`;
+  gC=[]; currentQ=null;
+}
+
+/* ============ XP / RANK ============ */
+function addXP(n){const before=rankIndex().lvl; state.xp+=n; const after=rankIndex().lvl;
+  if(after>before)rankUp(after);}
+function rankUp(lvl){toast('RANK UP', RANKS[lvl]);
+  Object.values(GEAR).flat().forEach(g=>{if(g.unlockAt<=lvl && !state.unlocked[g.id]){state.unlocked[g.id]=true;toast('UNLOCKED', g.name);}});}
+let tt;function toast(k,m){document.getElementById('toast-k').textContent=k;document.getElementById('toast-m').textContent=m;const t=document.getElementById('toast');t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),2400);}
+
+/* ============ OPERATOR PAGE ============ */
+function avatarSVG(){
+  const s=gearById(equipped.suit); let suit=s.suit, accent=s.accent;
+  if(state.domain){accent=CLASSES[state.domain].color;}
+  return `<svg viewBox="0 0 200 260" width="160" height="200" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${suit}" stop-opacity="1"/><stop offset="1" stop-color="${suit}" stop-opacity=".55"/></linearGradient>
+    <radialGradient id="vis" cx="0.5" cy="0.4" r="0.6"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="${accent}" stop-opacity=".2"/></radialGradient></defs>
+    <ellipse cx="100" cy="245" rx="55" ry="10" fill="${accent}" opacity="0.15"/>
+    <path d="M82 180 L78 240 L92 240 L96 182 Z" fill="url(#sg)" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M118 180 L122 240 L108 240 L104 182 Z" fill="url(#sg)" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M70 96 Q100 88 130 96 L126 184 Q100 192 74 184 Z" fill="url(#sg)" stroke="${accent}" stroke-width="2"/>
+    <path d="M88 100 L100 150 L112 100" fill="none" stroke="${accent}" stroke-width="2" opacity=".7"/>
+    <circle cx="100" cy="128" r="9" fill="none" stroke="${accent}" stroke-width="1.5" opacity=".9"/>
+    <circle cx="100" cy="128" r="3.5" fill="${accent}"/>
+    <path d="M66 100 Q60 112 64 128 L78 120 L74 100 Z" fill="${suit}" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M134 100 Q140 112 136 128 L122 120 L126 100 Z" fill="${suit}" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M64 124 L58 178 L70 180 L78 126 Z" fill="url(#sg)" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M136 124 L142 178 L130 180 L122 126 Z" fill="url(#sg)" stroke="${accent}" stroke-width="1.5"/>
+    <path d="M80 40 Q100 28 120 40 Q128 58 122 78 Q100 90 78 78 Q72 58 80 40 Z" fill="${suit}" stroke="${accent}" stroke-width="2"/>
+    <path d="M86 50 Q100 44 114 50 Q118 62 112 72 Q100 78 88 72 Q82 62 86 50 Z" fill="url(#vis)"/>
+    <line x1="100" y1="30" x2="100" y2="40" stroke="${accent}" stroke-width="2"/>
+    <circle cx="100" cy="28" r="3" fill="${accent}"/>
+  </svg>`;
+}
+
+const CLASSES={
+  air:{name:'Skyrunner',domain:'Aerial',color:'#60a5fa',glyph:'△',desc:'High-speed interceptor of the upper sector. Fragile but unmatched at closing distance fast and scanning wide.',stats:{Speed:5,'Sensor Range':4,Resilience:2},craft:'SR-9 "Kite" interceptor'},
+  surf:{name:'Tidewarden',domain:'Surface',color:'#fbbf24',glyph:'◇',desc:'Balanced surface operator. Durable hull, steady scans — the all-rounder that holds a sector together.',stats:{Speed:3,'Sensor Range':3,Resilience:5},craft:'TW-4 "Bastion" cutter'},
+  sub:{name:'Deepdiver',domain:'Subsurface',color:'#f472b6',glyph:'⬡',desc:'Silent hunter of the deep. Slow and short-sighted, but reads faint anomalies no one else can detect.',stats:{Speed:2,'Sensor Range':5,Resilience:4},craft:'DD-7 "Lantern" submersible'}
+};
+function craftSVG(key){
+  const c=CLASSES[key].color;
+  if(key==='air')return `<svg width="150" height="130" viewBox="0 0 180 150"><g stroke="${c}" stroke-width="1.8" fill="${c}22" stroke-linejoin="round">
+    <path d="M90 18 L100 100 L90 92 L80 100 Z" fill="${c}66"/>
+    <path d="M90 55 L150 105 L140 112 L90 78 Z"/>
+    <path d="M90 55 L30 105 L40 112 L90 78 Z"/>
+    <path d="M85 105 L95 105 L98 128 L82 128 Z" fill="${c}44"/>
+    <circle cx="90" cy="46" r="7" fill="${c}"/>
+    <line x1="90" y1="46" x2="90" y2="38" stroke-width="2"/>
+  </g></svg>`;
+  if(key==='surf')return `<svg width="150" height="130" viewBox="0 0 180 150"><g stroke="${c}" stroke-width="1.8" fill="${c}22" stroke-linejoin="round">
+    <path d="M28 100 L152 100 L138 128 L42 128 Z" fill="${c}66"/>
+    <rect x="70" y="66" width="40" height="34" fill="${c}44"/>
+    <rect x="80" y="46" width="20" height="20"/>
+    <line x1="90" y1="28" x2="90" y2="46" stroke-width="2"/>
+    <circle cx="90" cy="24" r="3" fill="${c}"/>
+    <line x1="42" y1="114" x2="138" y2="114" stroke-width="1" opacity="0.5"/>
+  </g></svg>`;
+  return `<svg width="150" height="130" viewBox="0 0 180 150"><g stroke="${c}" stroke-width="1.8" fill="${c}22" stroke-linejoin="round">
+    <ellipse cx="90" cy="80" rx="60" ry="24" fill="${c}66"/>
+    <circle cx="66" cy="80" r="8" fill="${c}"/>
+    <path d="M148 80 L166 68 L166 92 Z"/>
+    <path d="M90 56 L90 38 L108 46" fill="none"/>
+    <path d="M50 96 L50 112 M130 96 L130 112" stroke-width="1.5"/>
+    <circle cx="66" cy="80" r="3" fill="${c}" stroke="none"/>
+  </g></svg>`;
+}
+let enlPick=null;
+function renderEnlist(){
+  const row=document.getElementById('classrow');
+  row.innerHTML=Object.keys(CLASSES).map(k=>{
+    const c=CLASSES[k]; const sel=(enlPick||state.domain)===k;
+    const pips=Object.entries(c.stats).map(([sl,v])=>`<div class="stat-line"><span class="sl">${sl}</span><div class="pips">${[1,2,3,4,5].map(i=>`<span class="pip ${i<=v?'on':''}"></span>`).join('')}</div></div>`).join('');
+    return `<div class="class-card ${sel?'sel':''}" data-k="${k}" style="--cc:${c.color}">
+      <div class="class-glyph">${c.glyph}</div>
+      <div class="cc-check"></div>
+      <div class="class-render">${craftSVG(k)}</div>
+      <div class="class-domain">${c.domain} Domain</div>
+      <div class="class-name">${c.name}</div>
+      <div class="class-desc">${c.desc}</div>
+      ${pips}
+      <div class="craft-badge"><span class="cb-label">Starting craft</span><b>${c.craft}</b></div>
+    </div>`;
+  }).join('');
+  row.querySelectorAll('.class-card').forEach(el=>el.onclick=()=>{enlPick=el.dataset.k;renderEnlist();});
+  const btn=document.getElementById('enl-confirm');
+  if(enlPick){btn.disabled=false;btn.textContent = state.domain===enlPick?'Re-enter as '+CLASSES[enlPick].name:'Enlist as '+CLASSES[enlPick].name;}
+  else{btn.disabled=true;btn.textContent='Select a domain';}
+  btn.onclick=()=>{if(!enlPick)return;const first=!state.domain;state.domain=enlPick;
+    toast(first?'ENLISTED':'RE-ENLISTED',CLASSES[enlPick].name);
+    setTimeout(()=>{document.querySelector('.nav-item[data-page="stats"]').click();},600);};
+}
+
+function renderOperator(){
+  const ri=rankIndex();
+  document.getElementById('op-rank').textContent = state.domain? `${RANKS[ri.lvl]} · ${CLASSES[state.domain].domain} Domain` : RANKS[ri.lvl];
+  document.getElementById('op-eyebrow').textContent = state.domain ? CLASSES[state.domain].name.toUpperCase() : 'OPERATOR';
+  document.getElementById('op-name').textContent = state.domain ? CLASSES[state.domain].name : 'Cipher-7';
+  document.getElementById('xp-rank').textContent=RANKS[ri.lvl];
+  document.getElementById('xp-next').textContent= ri.lvl<RANKS.length-1?'→ '+RANKS[ri.lvl+1]:'MAX RANK';
+  document.getElementById('xp-fill').style.width=(ri.into/ri.need*100)+'%';
+  document.getElementById('xp-val').textContent=ri.into+' XP';
+  document.getElementById('xp-need').textContent= ri.lvl<RANKS.length-1?(ri.need-ri.into)+' XP to rank up':'—';
+  document.getElementById('op-reads').textContent=state.reads;
+  const cs=calibScore();
+  document.getElementById('op-acc').textContent = cs===null?'—':cs+'%';
+  document.getElementById('op-streak').textContent=state.bestStreak;
+  document.getElementById('op-shifts').textContent=state.shifts;
+  document.getElementById('avatar').innerHTML=avatarSVG();
+  const left=[['sensor','SENSORS'],['scope','SCOPE']];
+  const right=[['suit','OPERATOR SUIT'],['station','COMMAND STATION']];
+  document.getElementById('op-left').innerHTML=left.map(([k,lab])=>slotGroup(k,lab)).join('');
+  document.getElementById('op-right').innerHTML=right.map(([k,lab])=>slotGroup(k,lab)).join('');
+  bindSlots();
+}
+function slotGroup(cat,label){
+  return `<div class="slot-label">${label}</div>`+GEAR[cat].map(g=>{
+    const unlocked=state.unlocked[g.id]; const isEq=equipped[cat]===g.id;
+    return `<div class="gear-slot ${g.tier} ${unlocked?'':'locked'} ${isEq?'equipped':''}" data-cat="${cat}" data-id="${g.id}">
+      <div class="g-icon">${unlocked?g.icon:'▢'}</div>
+      <div><div class="g-name">${unlocked?g.name:'Locked'}</div><div class="g-type">${g.type}${isEq?' · equipped':''}</div></div>
+      <div class="g-tier ${g.tier}">${unlocked?g.tier:('Rank '+g.unlockAt)}</div></div>`;
+  }).join('');
+}
+function bindSlots(){document.querySelectorAll('.gear-slot').forEach(el=>{el.onclick=()=>{const cat=el.dataset.cat,id=el.dataset.id;if(!state.unlocked[id])return;equipped[cat]=id;renderOperator();};});}
+renderOperator();
+</script>
+<div id="mobile-splash" style="display:none;position:fixed;inset:0;background:#08080a;z-index:9999;padding:32px 24px;flex-direction:column;justify-content:center;align-items:flex-start;color:#f4f4f5;">
+  <div style="font-family:'General Sans',system-ui,sans-serif;">
+    <div style="font-size:11px;color:#4ade80;text-transform:uppercase;letter-spacing:0.12em;font-weight:600;margin-bottom:14px;">Raven Defense</div>
+    <div style="font-size:26px;font-weight:600;letter-spacing:-0.02em;margin-bottom:18px;line-height:1.2;">This prototype is desktop-only.</div>
+    <div style="font-size:15px;line-height:1.55;color:#a1a1aa;margin-bottom:28px;max-width:340px;">It's a multi-panel operator interface with a canvas-based signal-detection game. The mechanics need a full screen and precise pointing to work well. Come back on a laptop or desktop.</div>
+    <a href="index.html" style="display:inline-flex;align-items:center;gap:8px;padding:12px 20px;background:transparent;border:1px solid #2e2e36;color:#f4f4f5;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;">← Back to overview</a>
+  </div>
+</div>
+<style>
+  @media(max-width:720px){
+    #mobile-splash{display:flex !important;}
+    .app,.toast,.footer{display:none !important;}
+  }
+</style>
+</body>
+</html>
